@@ -5,6 +5,7 @@
 - [Getting all the Telemetry Out](#disable-telemetry)
 - [Extensions + Marketplace](#extensions-marketplace)
 - [Migrating from Visual Studio Code to VSCodium](#migrating)
+- [How do I run VSCodium in portable mode?](#portable)
 - [How do I press and hold a key and have it repeat in VSCodium?](#press-and-hold)
 - [How do I open VSCodium from the terminal?](#terminal-support)
 - [Gentoo overlay/ebuild](#gentoo-overlay)
@@ -17,7 +18,7 @@ We do however set the default `telemetry.enableCrashReporter` and `telemetry.ena
 
 The instructions [here](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting) and [here](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-crash-reporting) help with explaining and toggling telemetry.
 
-It is also highly recommended that you review all the settings that "use online services" by following [these instructions](https://code.visualstudio.com/docs/supporting/faq#_managing-online-services). The `@tag:usesOnlineServices` filter on the settings page will show that by default:
+It is also highly recommended that you review all the settings that "use online services" by following [these instructions](https://code.visualstudio.com/docs/getstarted/telemetry#_managing-online-services). The `@tag:usesOnlineServices` filter on the settings page will show that by default:
 
 - Extensions auto check for updates and auto install updates
 - Searches within the app are sent to an online service for "natural language processing"
@@ -63,6 +64,11 @@ To copy your settings manually:
 - Click the three dots `...` and choose 'Open settings.json'
 - Copy the contents of settings.json into the same place in VSCodium
 
+## <a id="portable"></a>How do I run VSCodium in portable mode?
+You can follow the [Portable Mode instructions](https://code.visualstudio.com/docs/editor/portable) from the Visual Studio Code website. For Windows and Linux the instructions can be followed as written. For Mac OS, portable mode is enabled by the existence of a specially named folder. For Visual Studio Code that folder name is `code-portable-data`. For VSCodium, that folder name is `codium-portable-data`. 
+
+So to enable portable mode for VSCodium on Mac OS, follow the instructions outlined in the link above, but create a folder named `codium-portable-data` instead of `code-portable-data`.
+
 ## <a id="press-and-hold"></a>How do I press and hold a key and have it repeat in VSCodium (Mac)?
 
 This is a common question for Visual Studio Code and the procedure is slightly different in VSCodium because the `defaults` path is different.
@@ -74,18 +80,18 @@ $ defaults write com.visualstudio.code.oss ApplePressAndHoldEnabled -bool false
 ## <a id="terminal-support"></a>How do I open VSCodium from the terminal?
 
 - Go to the command palette (View | Command Palette...)
-- Choose `Shell command: Install 'vscodium' command in PATH`.
+- Choose `Shell command: Install 'codium' command in PATH`.
 
-![](https://user-images.githubusercontent.com/2707340/45751224-bd21a500-bbdf-11e8-8fb7-b645b97aae49.png)
+![](https://user-images.githubusercontent.com/2707340/60140295-18338a00-9766-11e9-8fda-b525b6f15c13.png)
 
 This allows you to open files or directories in VSCodium directly from your terminal:
 
 ```bash
-~/in-my-project $ vscodium . # open this directory
-~/in-my-project $ vscodium file.txt # open this file
+~/in-my-project $ codium . # open this directory
+~/in-my-project $ codium file.txt # open this file
 ```
 
-Feel free to alias this command to something easier to type in your shell profile (e.g. `alias code=vscodium`).
+Feel free to alias this command to something easier to type in your shell profile (e.g. `alias code=codium`).
 
 ## <a id="gentoo-overlay"></a>Gentoo ebuild/overlay
 

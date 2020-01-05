@@ -40,7 +40,7 @@ If you are on a Mac and have [Homebrew](https://brew.sh/) installed:
 brew cask install vscodium
 ```
 
-_Note: if you see "App can’t be opened because it is from an unidentified developer" when opening VSCodium the first time, you can right-click the application and choose Open. This should only be required the first time opening on a Mac._
+_Note for Mac OS X Mojave users: if you see "App can't be opened because Apple cannot check it for malicious software" when opening VSCodium the first time, you can right-click the application and choose Open. This should only be required the first time opening on Mojave._
 
 #### <a id="install-with-choco"></a>Install with Chocolatey (Windows)
 If you use Windows and have [Chocolatey](https://chocolatey.org) installed (thanks to [@Thilas](https://github.com/Thilas)):
@@ -77,7 +77,7 @@ This repo exists so that you don't have to download+build from source. The build
 
 If you want to build from source yourself, head over to [Microsoft's vscode repo](https://github.com/Microsoft/vscode) and follow their [instructions](https://github.com/Microsoft/vscode/wiki/How-to-Contribute#build-and-run). This repo exists to make it easier to get the latest version of MIT-licensed VSCode.
 
-Microsoft's build process does download additional files. This was brought up in [Microsoft/vscode#49159](https://github.com/Microsoft/vscode/issues/49159) and [Microsoft/vscode#45978](https://github.com/Microsoft/vscode/issues/45978). These are the packages downloaded during build:
+Microsoft's build process (which we are running to build the binaries) does download additional files. This was brought up in [Microsoft/vscode#49159](https://github.com/Microsoft/vscode/issues/49159) and [Microsoft/vscode#45978](https://github.com/Microsoft/vscode/issues/45978). These are the packages downloaded during build:
 
 - Extensions from the Microsoft Marketplace:
   - ms-vscode.node-debug2
@@ -87,19 +87,27 @@ Microsoft's build process does download additional files. This was brought up in
   - ffmpeg
 
 ## <a id="more-info"></a>More Info
+
+### Documentation
 For more information on getting all the telemetry disabled and tips for migrating from Visual Studio Code to VSCodium, have a look at this [Docs](https://github.com/VSCodium/vscodium/blob/master/DOCS.md) page.
 
+### Extension Licensing
 Please note that some Visual Studio Code extensions have licenses that restrict their use to the official Visual Studio Code builds and therefore do not work with VSCodium. See [this note](https://github.com/VSCodium/vscodium/blob/master/DOCS.md#proprietary-debugging-tools) on the Docs page for what's been found so far and possible workarounds.
 
+### How are the VSCodium binaries built?
+If you would like to see the commands we run to build `vscode` into VSCodium binaries, have a look at the [`.travis.yml` file](https://github.com/VSCodium/vscodium/blob/master/.travis.yml) (for Linux and OS X builds) and the [`win32-build.yml` file](https://github.com/VSCodium/vscodium/blob/master/win32-build.yml) (for Windows builds). These build files call all the other scripts in the repo. If you find something that doesn't make sense, feel free to ask about it [on Gitter](https://gitter.im/VSCodium/Lobby).
+
+The builds are run every day, but exit early if there isn't a new release from Microsoft. To examine the build logs, go [here for Linux / OS X](https://travis-ci.com/VSCodium/vscodium) and [here for Windows](https://dev.azure.com/vscodium/VSCodium/_build?definitionId=1)
+
 ## <a id="supported-os"></a>Supported OS
-- [x] OSX x64 (zipped app file)
-- [x] Linux x64 (`.deb`, `.rpm`, and `.tar.gz` files)
-- [x] Linux x86 (`.deb`, `.rpm`, and `.tar.gz` files)
+- [x] OS X (`zip`, `dmg`)
+- [x] Linux x64 (`deb`, `rpm`, `AppImage`, `tar.gz`)
+- [x] Linux x86 (`deb`, `rpm`, `tar.gz`) ([up to v1.35.1](https://code.visualstudio.com/updates/v1_36#_linux-32bit-support-ends))
+- [x] Linux arm64 (`deb`, `tar.gz`)
+- [x] Linux armhf (`deb`, `tar.gz`)
 - [x] Windows x64
 - [x] Windows x86
   
-The ARM architecture is not currently supported but is being worked on.
-
 ## <a id="donate"></a>Donate
 If you would like to support the development of VSCodium, feel free to send BTC to `3PgjE95yzBDTrSPxPiqoxSgZFuKPPAix1N`.
 
