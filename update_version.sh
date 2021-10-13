@@ -1,7 +1,14 @@
 #!/bin/bash
 
-if [[ "$SHOULD_BUILD" != "yes" ]]; then
+set -e
+
+if [[ "${SHOULD_BUILD}" != "yes" ]]; then
   echo "Will not update version JSON because we did not build"
+  exit
+fi
+
+if [[ -z "${GITHUB_TOKEN}" ]]; then
+  echo "Will not update version JSON because no GITHUB_TOKEN defined"
   exit
 fi
 
@@ -16,52 +23,48 @@ fi
 #  }
 
 # `url` is URL_BASE + filename of asset e.g.
-#    darwin: https://github.com/VSCodium/vscodium/releases/download/${LATEST_MS_TAG}/VSCodium-darwin-${LATEST_MS_TAG}.zip
-# `name` is $LATEST_MS_TAG
-# `version` is $LATEST_MS_COMMIT
-# `productVersion` is $LATEST_MS_TAG
+#    darwin: https://github.com/VSCodium/vscodium/releases/download/${MS_TAG}/VSCodium-darwin-${MS_TAG}.zip
+# `name` is $MS_TAG
+# `version` is $MS_COMMIT
+# `productVersion` is $MS_TAG
 # `hash` in <filename>.sha1
 # `timestamp` is $(node -e 'console.log(Date.now())')
 # `sha256hash` in <filename>.sha256
 
-URL_BASE=https://github.com/VSCodium/vscodium/releases/download/${LATEST_MS_TAG}
+URL_BASE="https://github.com/VSCodium/vscodium/releases/download/${MS_TAG}"
 
 # to make testing on forks easier
-if [[ "$CI_WINDOWS" == "True" ]]; then
-  # BUILD_REPOSITORY_URI = e.g. https://github.com/VSCodium/vscodium
-  VERSIONS_REPO=$(echo ${BUILD_REPOSITORY_URI} | awk -F"/" '{ print $4 }')/versions
+VERSIONS_REPO="${GITHUB_USERNAME}/versions"
+echo "Versions repo: ${VERSIONS_REPO}"
 
-  git config --global core.autocrlf true
-else
-  # TRAVIS_REPO_SLUG = e.g. VSCodium/vscodium
-  VERSIONS_REPO=$(echo ${TRAVIS_REPO_SLUG} | awk -F"/" '{ print $1 }')/versions
-fi
-
-# generateJson <assetName>
-# e.g. generateJson VSCodium-darwin-1.33.0.zip
 generateJson() {
-  local assetName=$1
+  JSON_DATA="{}"
 
   # generate parts
-  local url=${URL_BASE}/${assetName}
-  local name=$LATEST_MS_TAG
-  local version=$LATEST_MS_COMMIT
-  local productVersion=$LATEST_MS_TAG
+  local url="${URL_BASE}/${ASSET_NAME}"
+  local name="${MS_TAG}"
+  local version="${MS_COMMIT}"
+  local productVersion="${MS_TAG}"
   local timestamp=$(node -e 'console.log(Date.now())')
 
-  local sha1hash=$(cat ${assetName}.sha1 | awk '{ print $1 }')
-  local sha256hash=$(cat ${assetName}.sha256 | awk '{ print $1 }')
+  if [[ ! -f "artifacts/${ASSET_NAME}" ]]; then
+    echo "Downloading artifact '${ASSET_NAME}'"
+    gh release download "${MS_TAG}" --dir "artifacts" --pattern "${ASSET_NAME}*"
+  fi
+
+  local sha1hash=$(cat "artifacts/${ASSET_NAME}.sha1" | awk '{ print $1 }')
+  local sha256hash=$(cat "artifacts/${ASSET_NAME}.sha256" | awk '{ print $1 }')
 
   # check that nothing is blank (blank indicates something awry with build)
   for key in url name version productVersion sha1hash timestamp sha256hash; do
-    if [[ "${!key}" == "" ]]; then
-      echo "Missing data for version update; exiting..."
+    if [[ -z "${key}" ]]; then
+      echo "Variable '${key}' is empty; exiting..."
       exit 1
     fi
   done
 
   # generate json
-  local json=$(jq \
+  JSON_DATA=$(jq \
     --arg url             "${url}" \
     --arg name            "${name}" \
     --arg version         "${version}" \
@@ -71,76 +74,86 @@ generateJson() {
     --arg sha256hash      "${sha256hash}" \
     '. | .url=$url | .name=$name | .version=$version | .productVersion=$productVersion | .hash=$hash | .timestamp=$timestamp | .sha256hash=$sha256hash' \
     <<<'{}')
-
-  echo "$json"
 }
 
 updateLatestVersion() {
+  echo "Generating ${VERSION_PATH}/latest.json"
+
+  generateJson
+
   cd versions
 
-  local versionPath=$1
-  local json=$2
-
   # create/update the latest.json file in the correct location
-  mkdir -p $versionPath
-  echo $json > $versionPath/latest.json
+  mkdir -p "${VERSION_PATH}"
+  echo "${JSON_DATA}" > "${VERSION_PATH}/latest.json"
 
   cd ..
 }
 
 # init versions repo for later commiting + pushing the json file to it
 # thank you https://www.vinaygopinath.me/blog/tech/commit-to-master-branch-on-github-using-travis-ci/
-git clone https://github.com/${VERSIONS_REPO}.git
+git clone "https://github.com/${VERSIONS_REPO}.git"
 cd versions
 git config user.email "vscodium-ci@not-real.com"
 git config user.name "VSCodium CI"
 git remote rm origin
-git remote add origin https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${VERSIONS_REPO}.git > /dev/null 2>&1
+git remote add origin "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${VERSIONS_REPO}.git" > /dev/null 2>&1
 cd ..
 
-if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-  # zip, sha1, and sha256 files are all at top level dir
-  ASSET_NAME=VSCodium-darwin-${LATEST_MS_TAG}.zip
-  VERSION_PATH="darwin"
-  JSON="$(generateJson ${ASSET_NAME})"
-  updateLatestVersion "$VERSION_PATH" "$JSON"
-elif [[ "$CI_WINDOWS" == "True" ]]; then
+if [[ "${OS_NAME}" == "osx" ]]; then
+  ASSET_NAME=VSCodium-darwin-${VSCODE_ARCH}-${MS_TAG}.zip
+  VERSION_PATH="darwin/${VSCODE_ARCH}"
+  updateLatestVersion
+elif [[ "${OS_NAME}" == "windows" ]]; then
   # system installer
-  ASSET_NAME=VSCodiumSetup-${BUILDARCH}-${LATEST_MS_TAG}.exe
-  VERSION_PATH="win32/${BUILDARCH}/system"
-  JSON="$(generateJson ${ASSET_NAME})"
-  updateLatestVersion "$VERSION_PATH" "$JSON"
+  ASSET_NAME=VSCodiumSetup-${VSCODE_ARCH}-${MS_TAG}.exe
+  VERSION_PATH="win32/${VSCODE_ARCH}/system"
+  updateLatestVersion
 
   # user installer
-  ASSET_NAME=VSCodiumUserSetup-${BUILDARCH}-${LATEST_MS_TAG}.exe
-  VERSION_PATH="win32/${BUILDARCH}/user"
-  JSON="$(generateJson ${ASSET_NAME})"
-  updateLatestVersion "$VERSION_PATH" "$JSON"
+  ASSET_NAME=VSCodiumUserSetup-${VSCODE_ARCH}-${MS_TAG}.exe
+  VERSION_PATH="win32/${VSCODE_ARCH}/user"
+  updateLatestVersion
 
   # windows archive
-  ASSET_NAME=VSCodium-win32-${BUILDARCH}-${LATEST_MS_TAG}.zip
-  VERSION_PATH="win32/${BUILDARCH}/archive"
-  JSON="$(generateJson ${ASSET_NAME})"
-  updateLatestVersion "$VERSION_PATH" "$JSON"
+  ASSET_NAME=VSCodium-win32-${VSCODE_ARCH}-${MS_TAG}.zip
+  VERSION_PATH="win32/${VSCODE_ARCH}/archive"
+  updateLatestVersion
+
+  if [[ "${VSCODE_ARCH}" == "ia32" || "${VSCODE_ARCH}" == "x64" ]]; then
+    # msi
+    ASSET_NAME=VSCodium-${VSCODE_ARCH}-${MS_TAG}.msi
+    VERSION_PATH="win32/${VSCODE_ARCH}/msi"
+    updateLatestVersion
+
+    # updates-disabled msi
+    ASSET_NAME=VSCodium-${VSCODE_ARCH}-updates-disabled-${MS_TAG}.msi
+    VERSION_PATH="win32/${VSCODE_ARCH}/msi-updates-disabled"
+    updateLatestVersion
+  fi
 else # linux
   # update service links to tar.gz file
   # see https://update.code.visualstudio.com/api/update/linux-x64/stable/VERSION
   # as examples
-  ASSET_NAME=VSCodium-linux-${BUILDARCH}-${LATEST_MS_TAG}.tar.gz
-  VERSION_PATH="linux/${BUILDARCH}"
-  JSON="$(generateJson ${ASSET_NAME})"
-  updateLatestVersion "$VERSION_PATH" "$JSON"
+  ASSET_NAME=VSCodium-linux-${VSCODE_ARCH}-${MS_TAG}.tar.gz
+  VERSION_PATH="linux/${VSCODE_ARCH}"
+  updateLatestVersion
 fi
 
 cd versions
 
 git pull origin master # in case another build just pushed
 git add .
-dateAndMonth=`date "+%D %T"`
-git commit -m "Travis update: $dateAndMonth (Build $TRAVIS_BUILD_NUMBER)"
-if ! git push origin master --quiet; then
-  git pull origin master
-  git push origin master --quiet
+
+CHANGES=$( git status --porcelain )
+
+if [[ ! -z "${CHANGES}" ]]; then
+  dateAndMonth=$( date "+%D %T" )
+  git commit -m "CI update: ${dateAndMonth} (Build ${GITHUB_RUN_NUMBER})"
+  if ! git push origin master --quiet; then
+    git pull origin master
+    git push origin master --quiet
+  fi
 fi
 
 cd ..

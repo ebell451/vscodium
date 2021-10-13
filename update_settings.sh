@@ -3,14 +3,8 @@ DEFAULT_FALSE="'default': false"
 TELEMETRY_ENABLE="'telemetry.enableTelemetry':"
 TELEMETRY_CRASH_REPORTER="'telemetry.enableCrashReporter':"
 
-replace () {
-  echo $1
-  if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    sed -i '' -E "$1" $2
-  else
-    sed -i -E "$1" $2
-  fi
-}
+#include common functions
+. ../utils.sh
 
 update_setting () {
   local FILENAME="$2"
@@ -46,4 +40,4 @@ update_setting () {
 }
 
 update_setting "$TELEMETRY_ENABLE" src/vs/platform/telemetry/common/telemetryService.ts
-update_setting "$TELEMETRY_CRASH_REPORTER" src/vs/workbench/electron-browser/desktop.contribution.ts
+update_setting "$TELEMETRY_CRASH_REPORTER" src/vs/workbench/electron-sandbox/desktop.contribution.ts
